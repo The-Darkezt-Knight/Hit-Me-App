@@ -23,16 +23,16 @@ import {
 } from '../../services/posts';
 
 const colors = {
-  background: '#ffffff',
+  background: '#f0f2f5',
   card: '#ffffff',
-  primary: '#0b8bd4',
-  primaryDark: '#0a6aa3',
-  accent: '#d9f1ff',
-  accentStrong: '#b7e4ff',
-  border: '#d6e8f6',
-  text: '#0f172a',
-  muted: '#4a5b76',
-  soft: '#eef6ff'
+  primary: '#0866ff',
+  primaryDark: '#0750c4',
+  accent: '#e7f3ff',
+  accentStrong: '#1877f2',
+  border: '#ccd0d5',
+  text: '#050505',
+  muted: '#65676b',
+  soft: '#f0f2f5'
 };
 
 export default function Profile({ navigation }) {
@@ -264,33 +264,31 @@ export default function Profile({ navigation }) {
       <View style={styles.shell}>
         <Animated.View style={[styles.headerBar, introStyle]}>
           <View style={styles.brandBlock}>
-            <View style={styles.brandMark} />
-            <View>
-              <Text style={styles.brandTitle}>Hit-Me</Text>
-              <Text style={styles.brandTag}>Social studio</Text>
+            <View style={styles.brandMark}>
+              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 24, lineHeight: 28, fontFamily: 'Arial'}}>f</Text>
+            </View>
+            <View style={styles.searchWrap}>
+              <TextInput
+                placeholder="Search Hit-Me"
+                placeholderTextColor={colors.muted}
+                style={styles.searchInput}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
             </View>
           </View>
-          <View style={styles.searchWrap}>
-            <TextInput
-              placeholder="Search people, posts, and rooms"
-              placeholderTextColor={colors.muted}
-              style={styles.searchInput}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
           <View style={styles.headerActions}>
-            <Pressable
-              style={styles.secondaryButtonSmall}
-              onPress={() => navigation.navigate('Home')}
-            >
-              <Text style={styles.secondaryButtonSmallText}>Back home</Text>
-            </Pressable>
             <Pressable
               style={styles.primaryButtonSmall}
               onPress={handleOpenComposer}
             >
               <Text style={styles.primaryButtonSmallText}>New post</Text>
+            </Pressable>
+            <Pressable
+              style={styles.secondaryButtonSmall}
+              onPress={() => navigation.navigate('Home')}
+            >
+              <Text style={styles.secondaryButtonSmallText}>Back home</Text>
             </Pressable>
           </View>
         </Animated.View>
@@ -353,78 +351,73 @@ const styles = StyleSheet.create({
   },
   shell: {
     flex: 1,
-    width: '94%',
-    maxWidth: 1320,
-    alignSelf: 'center',
-    paddingVertical: 24,
-    gap: 18
+    width: '100%',
+    alignSelf: 'center'
   },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 16,
-    padding: 18,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingHorizontal: 16,
+    height: 56,
     backgroundColor: colors.card,
-    shadowColor: colors.primaryDark,
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    zIndex: 10
   },
   brandBlock: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12
+    gap: 8,
+    flex: 1
   },
   brandMark: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.primary,
-    shadowColor: colors.primaryDark,
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 }
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   brandTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.text,
-    fontFamily: 'Georgia'
+    display: 'none'
   },
   brandTag: {
-    fontSize: 12,
-    color: colors.muted,
-    fontFamily: 'Trebuchet MS'
+    display: 'none'
   },
   searchWrap: {
     flex: 1,
-    minWidth: 220
+    maxWidth: 240,
+    marginLeft: 8
   },
   searchInput: {
-    height: 44,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 14,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 0,
+    paddingHorizontal: 16,
     backgroundColor: colors.soft,
     color: colors.text,
-    fontFamily: 'Trebuchet MS'
+    fontSize: 15
   },
   headerActions: {
     flexDirection: 'row',
-    gap: 10
+    gap: 8,
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'center'
   },
   feedShell: {
     flex: 1,
     minHeight: 0,
     width: '100%',
-    maxWidth: 860,
-    alignSelf: 'center'
+    maxWidth: 680,
+    alignSelf: 'center',
+    marginTop: 20
   },
   feedScroll: {
     flex: 1
@@ -467,29 +460,26 @@ const styles = StyleSheet.create({
     fontFamily: 'Trebuchet MS'
   },
   primaryButtonSmall: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 14,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 12
+    borderRadius: 6
   },
   primaryButtonSmallText: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 12,
-    fontFamily: 'Trebuchet MS'
+    color: colors.primary,
+    fontWeight: '600',
+    fontSize: 14
   },
   secondaryButtonSmall: {
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: 'transparent',
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10
+    paddingVertical: 8,
+    borderRadius: 6
   },
   secondaryButtonSmallText: {
     color: colors.muted,
-    fontSize: 12,
-    fontWeight: '700',
-    fontFamily: 'Trebuchet MS'
+    fontSize: 14,
+    fontWeight: '600'
   },
   stateText: {
     color: colors.muted,
