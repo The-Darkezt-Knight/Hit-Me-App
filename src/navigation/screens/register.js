@@ -1,5 +1,5 @@
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import {
     ImageBackground,
@@ -47,28 +47,36 @@ export default function Register({navigation}) {
                 uid: user.uid,
                 email: user.email,
                 authProvider: 'password',
-                createdAt: serverTimestamp()
+                createdAt: serverTimestamp(),
+                isActive: true
             });
         } catch (error) {
             setAlert(error.message);
         }
     }
 
-    const handleSignInWithGoogle = () => {
-                    signInWithPopup(auth, provider)
-                    .then((result) => {
-                        const credential = GoogleAuthProvider.credentialFromResult(result);
-                        const token = credential.accessToken;
-                        const user = result.user;
-                    }).catch((error) => {
-                        const errorCode = error.code;
-                        const errorMessage = error.message;
-                        // The email of the user's account used.
-                        const email = error.customData.email;
-                        // The AuthCredential type that was used.
-                        const credential = GoogleAuthProvider.credentialFromError(error);
-                    });
+    const handleSignInWithGoogle = async () => {
+        try {
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+
+            if (!userDocSnap.exists()) {
+                await setDoc(userDocRef, {
+                    uid: user.uid,
+                    email: user.email,
+                    authProvider: 'google',
+                    createdAt: serverTimestamp(),
+                    isActive: true
+                });
             }
+        } catch (error) {
+            console.error('Error signing in with Google:', error);
+            setAlert(error.message);
+        }
+    };
 
     return (
 
