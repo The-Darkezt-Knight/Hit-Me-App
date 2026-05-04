@@ -17,6 +17,7 @@ export const PRIVACY_PRIVATE = 'private';
 
 const publicSubscribers = new Set();
 const userSubscribers = new Map();
+const allSubscribers = new Set();
 const optimisticPosts = [];
 
 function normalizePrivacy(value) {
@@ -95,18 +96,23 @@ function reconcileOptimisticPosts(snapshotPosts) {
 }
 
 function notifyPublicSubscribers(snapshotPosts) {
-  const visiblePosts = buildVisiblePosts(snapshotPosts, (post) => post.privacy === PRIVACY_PUBLIC);
+  const visiblePosts = buildVisiblePosts(snapshotPosts, (post) => post.privacy === PRIVACY_PUBLIC && !post.hidden);
   publicSubscribers.forEach((callback) => callback(visiblePosts));
 }
 
 function notifyUserSubscribers(userId, snapshotPosts) {
-  const visiblePosts = buildVisiblePosts(snapshotPosts, (post) => post.authorId === userId);
+  const visiblePosts = buildVisiblePosts(snapshotPosts, (post) => post.authorId === userId && !post.hidden);
   const subscribers = userSubscribers.get(userId);
   if (!subscribers) {
     return;
   }
 
   subscribers.forEach((callback) => callback(visiblePosts));
+}
+
+function notifyAllSubscribers(snapshotPosts) {
+  const visiblePosts = buildVisiblePosts(snapshotPosts, () => true);
+  allSubscribers.forEach((callback) => callback(visiblePosts));
 }
 
 export async function createPost({
@@ -141,6 +147,7 @@ export async function createPost({
   optimisticPosts.unshift(optimisticPost);
   notifyPublicSubscribers([]);
   notifyUserSubscribers(authorId, []);
+  notifyAllSubscribers([]);
 
   const docRef = await addDoc(collection(db, 'posts'), payload);
   return docRef;
@@ -168,6 +175,15 @@ export async function deletePost(postId) {
   await deleteDoc(postRef);
 }
 
+export async function setPostHidden(postId, hidden) {
+  if (!postId) {
+    throw new Error('Post id is required.');
+  }
+
+  const postRef = doc(db, 'posts', postId);
+  await updateDoc(postRef, { hidden });
+}
+
 export async function setPostReaction(postId, userId, shouldReact) {
   if (!postId) {
     throw new Error('Post id is required.');
@@ -191,7 +207,7 @@ export function subscribeToPublicPosts(onData, onError, options = {}) {
     postsRef,
     (snapshot) => {
       const posts = snapshot.docs.map((doc) => normalizePost({ id: doc.id, data: doc.data() }));
-      const visiblePosts = buildVisiblePosts(posts, (post) => post.privacy === PRIVACY_PUBLIC);
+      const visiblePosts = buildVisiblePosts(posts, (post) => post.privacy === PRIVACY_PUBLIC && !post.hidden);
       publicSubscribers.add(onData);
       reconcileOptimisticPosts(visiblePosts);
 
@@ -229,8 +245,9 @@ export function subscribeToUserPosts(userId, userEmail, onData, onError) {
       const visiblePosts = buildVisiblePosts(
         posts,
         (post) =>
-          post.authorId === userId ||
-          (userEmail && post.authorEmail?.toLowerCase?.() === userEmail.toLowerCase())
+          !post.hidden &&
+          (post.authorId === userId ||
+            (userEmail && post.authorEmail?.toLowerCase?.() === userEmail.toLowerCase()))
       );
       if (!userSubscribers.has(userId)) {
         userSubscribers.set(userId, new Set());
@@ -252,6 +269,26 @@ export function subscribeToUserPosts(userId, userEmail, onData, onError) {
       }
     }
 
+    unsubscribe();
+  };
+}
+
+export function subscribeToAllPosts(onData, onError) {
+  const postsRef = collection(db, 'posts');
+  const unsubscribe = onSnapshot(
+    postsRef,
+    (snapshot) => {
+      const posts = snapshot.docs.map((doc) => normalizePost({ id: doc.id, data: doc.data() }));
+      const visiblePosts = buildVisiblePosts(posts, () => true);
+      allSubscribers.add(onData);
+      reconcileOptimisticPosts(visiblePosts);
+      onData(visiblePosts);
+    },
+    onError
+  );
+
+  return () => {
+    allSubscribers.delete(onData);
     unsubscribe();
   };
 }
