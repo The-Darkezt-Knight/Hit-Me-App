@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableWithoutFeedback,
-  View,
-  ScrollView,
-  Alert
+  View
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -18,7 +18,7 @@ import {
   setPostHidden,
   subscribeToAllPosts
 } from '../../services/posts';
-import { subscribeToAllUsers, setUserActiveStatus, deleteUserDoc } from '../../services/users';
+import { deleteUserDoc, setUserActiveStatus, subscribeToAllUsers } from '../../services/users';
 
 export default function Admin({ navigation }) {
   const { logout } = useAuth();
