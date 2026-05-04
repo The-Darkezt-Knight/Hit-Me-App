@@ -11,6 +11,36 @@ import {
   TextInput,
   View
 } from 'react-native';
+
+const InteractiveButton = ({ onPress, style, children }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scale, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <Animated.View style={[style, { transform: [{ scale }] }]}>
+        {children}
+      </Animated.View>
+    </Pressable>
+  );
+};
 import PostCard from '../../component/PostCard';
 import PostComposer from '../../component/PostComposer';
 import { useAuth } from '../../context/AuthContext';
@@ -25,14 +55,14 @@ import {
 const colors = {
   background: '#ffffff',
   card: '#ffffff',
-  primary: '#0b8bd4',
-  primaryDark: '#0a6aa3',
-  accent: '#d9f1ff',
-  accentStrong: '#b7e4ff',
-  border: '#d6e8f6',
-  text: '#0f172a',
-  muted: '#4a5b76',
-  soft: '#eef6ff'
+  primary: '#000000',
+  primaryDark: '#1a1a1a',
+  accent: '#f0f0f0',
+  accentStrong: '#e0e0e0',
+  border: '#eaeaea',
+  text: '#111111',
+  muted: '#666666',
+  soft: '#fafafa'
 };
 
 export default function Profile({ navigation }) {
@@ -280,18 +310,18 @@ export default function Profile({ navigation }) {
             />
           </View>
           <View style={styles.headerActions}>
-            <Pressable
+            <InteractiveButton
               style={styles.secondaryButtonSmall}
               onPress={() => navigation.navigate('Home')}
             >
               <Text style={styles.secondaryButtonSmallText}>Back home</Text>
-            </Pressable>
-            <Pressable
+            </InteractiveButton>
+            <InteractiveButton
               style={styles.primaryButtonSmall}
               onPress={handleOpenComposer}
             >
               <Text style={styles.primaryButtonSmallText}>New post</Text>
-            </Pressable>
+            </InteractiveButton>
           </View>
         </Animated.View>
 
@@ -318,12 +348,12 @@ export default function Profile({ navigation }) {
               <Text style={styles.modalTitle}>
                 {editingPost ? 'Update post' : 'New post'}
               </Text>
-              <Pressable
+              <InteractiveButton
                 style={styles.secondaryButtonSmall}
                 onPress={handleCloseComposer}
               >
                 <Text style={styles.secondaryButtonSmallText}>Close</Text>
-              </Pressable>
+              </InteractiveButton>
             </View>
             <ScrollView contentContainerStyle={styles.modalContent}>
               <PostComposer
@@ -364,16 +394,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 16,
-    padding: 18,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    borderRadius: 24,
     backgroundColor: colors.card,
-    shadowColor: colors.primaryDark,
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2
   },
   brandBlock: {
     flexDirection: 'row',
@@ -381,39 +410,33 @@ const styles = StyleSheet.create({
     gap: 12
   },
   brandMark: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    shadowColor: colors.primaryDark,
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 }
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: colors.text,
   },
   brandTitle: {
     fontSize: 22,
     fontWeight: '700',
     color: colors.text,
-    fontFamily: 'Georgia'
   },
   brandTag: {
     fontSize: 12,
     color: colors.muted,
-    fontFamily: 'Trebuchet MS'
   },
   searchWrap: {
     flex: 1,
-    minWidth: 220
+    minWidth: 220,
+    maxWidth: 400,
   },
   searchInput: {
-    height: 44,
-    borderRadius: 14,
+    height: 42,
+    borderRadius: 21,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 14,
-    backgroundColor: colors.soft,
+    paddingHorizontal: 18,
+    backgroundColor: colors.background,
     color: colors.text,
-    fontFamily: 'Trebuchet MS'
   },
   headerActions: {
     flexDirection: 'row',
@@ -436,66 +459,58 @@ const styles = StyleSheet.create({
     gap: 18
   },
   profileIntroCard: {
-    backgroundColor: colors.card,
-    borderRadius: 18,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.primaryDark,
-    shadowOpacity: 0.08,
+    backgroundColor: colors.primary,
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
-    gap: 8
+    elevation: 3,
+    gap: 8,
+    alignItems: 'center',
   },
   profileIntroAccent: {
-    width: 46,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: colors.accentStrong
+    display: 'none',
   },
   profileIntroTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: colors.text,
-    fontFamily: 'Georgia'
+    color: colors.background,
   },
   profileIntroText: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.muted,
-    fontFamily: 'Trebuchet MS'
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.accentStrong,
+    textAlign: 'center',
   },
   primaryButtonSmall: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 100
   },
   primaryButtonSmallText: {
     color: '#ffffff',
     fontWeight: '700',
     fontSize: 12,
-    fontFamily: 'Trebuchet MS'
   },
   secondaryButtonSmall: {
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 100
   },
   secondaryButtonSmallText: {
     color: colors.muted,
     fontSize: 12,
     fontWeight: '700',
-    fontFamily: 'Trebuchet MS'
   },
   stateText: {
     color: colors.muted,
     fontSize: 13,
     textAlign: 'center',
-    fontFamily: 'Trebuchet MS'
   },
   modalBackdrop: {
     flex: 1,
@@ -524,7 +539,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: colors.text,
-    fontFamily: 'Georgia'
   },
   modalContent: {
     paddingBottom: 8

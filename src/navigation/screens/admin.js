@@ -1,16 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableWithoutFeedback,
-  View,
-  ScrollView,
-  Alert
+    Alert,
+    FlatList,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    TouchableWithoutFeedback,
+    View
 } from 'react-native';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../context/AuthContext';
 import { subscribeToAllPosts, setPostHidden, deletePost } from '../../services/posts';
 import { subscribeToAllUsers, setUserActiveStatus, deleteUserDoc } from '../../services/users';
