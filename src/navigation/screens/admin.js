@@ -8,6 +8,7 @@ import {
     Pressable,
     StyleSheet,
     Text,
+    TextInput,
     TouchableWithoutFeedback,
     View
 } from 'react-native';
@@ -18,6 +19,8 @@ import { useAuth } from '../../context/AuthContext';
 export default function Admin({navigation}) {
     const { logout } = useAuth();
     const [users, setUsers] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterStatus, setFilterStatus] = useState('All');
 
     useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
@@ -75,6 +78,19 @@ export default function Admin({navigation}) {
         }
     };
 
+    const filteredUsers = users.filter((user) => {
+        const matchesSearch = user.email ? user.email.toLowerCase().includes(searchQuery.toLowerCase()) : false;
+
+        let matchesFilter = true;
+        if (filterStatus === 'Active') {
+            matchesFilter = user.status !== 'deactivated';
+        } else if (filterStatus === 'Deactivated') {
+            matchesFilter = user.status === 'deactivated';
+        }
+
+        return matchesSearch && matchesFilter;
+    });
+
     const renderUser = ({ item }) => (
         <View style={styles.tableRow}>
             <Text style={styles.tableCellEmail} numberOfLines={1} ellipsizeMode="tail">{item.email}</Text>
@@ -119,13 +135,41 @@ export default function Admin({navigation}) {
                     </View>
 
                     <View style={styles.tableContainer}>
+                        <View style={styles.controlsContainer}>
+                            <TextInput
+                                style={styles.searchInput}
+                                placeholder="Search by email..."
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                            />
+                            <View style={styles.filterContainer}>
+                                {['All', 'Active', 'Deactivated'].map((status) => (
+                                    <Pressable
+                                        key={status}
+                                        style={[
+                                            styles.filterBtn,
+                                            filterStatus === status && styles.filterBtnActive
+                                        ]}
+                                        onPress={() => setFilterStatus(status)}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.filterBtnText,
+                                                filterStatus === status && styles.filterBtnTextActive
+                                            ]}
+                                        >{status}</Text>
+                                    </Pressable>
+                                ))}
+                            </View>
+                        </View>
+
                         <View style={styles.tableHeader}>
                             <Text style={styles.tableHeaderCellEmail}>Email</Text>
                             <Text style={styles.tableHeaderCellStatus}>Status</Text>
                             <Text style={styles.tableHeaderCellAction}>Actions</Text>
                         </View>
                         <FlatList
-                            data={users}
+                            data={filteredUsers}
                             keyExtractor={(item) => item.id}
                             renderItem={renderUser}
                             contentContainerStyle={styles.listContent}
@@ -194,6 +238,41 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
+    },
+    controlsContainer: {
+        marginBottom: 15,
+        gap: 10,
+    },
+    searchInput: {
+        height: 40,
+        borderColor: '#ccc',
+        borderWidth: 1,
+        borderRadius: 5,
+        paddingHorizontal: 10,
+        backgroundColor: '#f9f9f9',
+    },
+    filterContainer: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+    filterBtn: {
+        paddingVertical: 5,
+        paddingHorizontal: 15,
+        borderRadius: 15,
+        borderWidth: 1,
+        borderColor: '#0096c7',
+        backgroundColor: 'transparent',
+    },
+    filterBtnActive: {
+        backgroundColor: '#0096c7',
+    },
+    filterBtnText: {
+        color: '#0096c7',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    filterBtnTextActive: {
+        color: '#fff',
     },
     tableHeader: {
         flexDirection: 'row',
