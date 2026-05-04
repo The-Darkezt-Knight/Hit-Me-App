@@ -1,4 +1,5 @@
-import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import {
     ImageBackground,
@@ -8,7 +9,7 @@ import {
     TextInput,
     View
 } from 'react-native';
-import { auth, provider } from '../../../firebaseConfig';
+import { auth, db, provider } from '../../../firebaseConfig';
 import SignInWithGoogle from '../../component/SignInWithGoogleButton';
 
 export default function Index({navigation}) {
@@ -34,23 +35,34 @@ export default function Index({navigation}) {
                 });
         }
 
-    const handleLogin = () => {
+    const handleLogin = async () => {
 
         (email === '') ? setEmailAlert("Email is empty") : setEmailAlert('');
 
         (password === '') ? setPasswordAlert('Password is empty') : setPasswordAlert('');
 
+        if (email === '' || password === '') return;
 
-        signInWithEmailAndPassword(auth, email, password)
-        .then((userCredential) => {
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
-            setEmail('')
-            setPassword('')
-        })
-        .catch((error) => {
+
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists() && userDoc.data().status === 'deactivated') {
+                await signOut(auth);
+                setEmailAlert('Your account is deactivated');
+                return;
+            }
+
+            setEmail('');
+            setPassword('');
+            setEmailAlert('');
+            setPasswordAlert('');
+        } catch (error) {
             const errorCode = error.code;
             const errorMessage = error.message;
-        });
+            setEmailAlert(errorMessage);
+        }
     }
 
     return (
