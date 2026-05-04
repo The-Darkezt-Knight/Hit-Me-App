@@ -41,3 +41,12 @@ export async function deleteUserDoc(userId) {
   const userRef = doc(db, 'users', userId);
   await deleteDoc(userRef);
 }
+
+export async function updateUserProfile(userId, updates) {
+  if (!userId) {
+    throw new Error('User id is required.');
+  }
+
+  const userRef = doc(db, 'users', userId);
+  await updateDoc(userRef, updates);
+}

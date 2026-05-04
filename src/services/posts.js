@@ -5,10 +5,12 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   increment,
   onSnapshot,
   serverTimestamp,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 
@@ -198,6 +200,83 @@ export async function setPostReaction(postId, userId, shouldReact) {
     reactCount: increment(shouldReact ? 1 : -1),
     reactedBy: shouldReact ? arrayUnion(userId) : arrayRemove(userId)
   });
+}
+
+export async function backfillPostAuthors() {
+  const postsSnapshot = await getDocs(collection(db, 'posts'));
+  const usersSnapshot = await getDocs(collection(db, 'users'));
+
+  const usersById = new Map();
+  const usersByEmail = new Map();
+
+  usersSnapshot.forEach((userDoc) => {
+    const userData = userDoc.data() || {};
+    usersById.set(userDoc.id, userData);
+    if (userData.email) {
+      usersByEmail.set(String(userData.email).toLowerCase(), userData);
+    }
+  });
+
+  const maxBatchSize = 450;
+  let batch = writeBatch(db);
+  let batchCount = 0;
+  let updated = 0;
+  const commits = [];
+
+  postsSnapshot.forEach((postDoc) => {
+    const postData = postDoc.data() || {};
+    const authorId = postData.authorId;
+    const authorEmail = postData.authorEmail;
+    const user =
+      (authorId && usersById.get(authorId)) ||
+      (authorEmail && usersByEmail.get(String(authorEmail).toLowerCase()));
+
+    if (!user) {
+      return;
+    }
+
+    const nextName = typeof user.fullName === 'string' ? user.fullName.trim() : '';
+    const nextImage =
+      typeof user.profileImage === 'string' ? user.profileImage.trim() : '';
+
+    if (!nextName || !nextImage) {
+      return;
+    }
+
+    const currentName =
+      typeof postData.authorName === 'string' ? postData.authorName.trim() : '';
+    const currentImage =
+      typeof postData.authorProfileImage === 'string'
+        ? postData.authorProfileImage.trim()
+        : '';
+
+    if (currentName === nextName && currentImage === nextImage) {
+      return;
+    }
+
+    batch.update(postDoc.ref, {
+      authorName: nextName,
+      authorProfileImage: nextImage
+    });
+    batchCount += 1;
+    updated += 1;
+
+    if (batchCount >= maxBatchSize) {
+      commits.push(batch.commit());
+      batch = writeBatch(db);
+      batchCount = 0;
+    }
+  });
+
+  if (batchCount > 0) {
+    commits.push(batch.commit());
+  }
+
+  if (commits.length) {
+    await Promise.all(commits);
+  }
+
+  return { updated, totalPosts: postsSnapshot.size };
 }
 
 export function subscribeToPublicPosts(onData, onError, options = {}) {

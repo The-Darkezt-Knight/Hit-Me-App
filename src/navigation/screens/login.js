@@ -1,5 +1,5 @@
-import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import {
     ImageBackground,
@@ -42,34 +42,23 @@ export default function Index({navigation}) {
         }
     };
 
-    const handleLogin = async () => {
+    const handleLogin = () => {
 
         (email === '') ? setEmailAlert("Email is empty") : setEmailAlert('');
 
         (password === '') ? setPasswordAlert('Password is empty') : setPasswordAlert('');
 
-        if (email === '' || password === '') return;
 
-        try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
             const user = userCredential.user;
-
-            const userDoc = await getDoc(doc(db, 'users', user.uid));
-            if (userDoc.exists() && userDoc.data().status === 'deactivated') {
-                await signOut(auth);
-                setEmailAlert('Your account is deactivated');
-                return;
-            }
-
-            setEmail('');
-            setPassword('');
-            setEmailAlert('');
-            setPasswordAlert('');
-        } catch (error) {
+            setEmail('')
+            setPassword('')
+        })
+        .catch((error) => {
             const errorCode = error.code;
             const errorMessage = error.message;
-            setEmailAlert(errorMessage);
-        }
+        });
     }
 
     return (

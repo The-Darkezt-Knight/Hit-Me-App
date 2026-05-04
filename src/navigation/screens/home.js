@@ -71,7 +71,9 @@ export default function Home({ navigation }) {
       await createPost({
         ...payload,
         authorId: user.uid,
-        authorEmail: user.email || 'Unknown'
+        authorEmail: user.email || 'Unknown',
+        authorName: user.fullName?.trim?.() || '',
+        authorProfileImage: user.profileImage?.trim?.() || ''
       });
       setComposerOpen(false);
       setEditingPost(null);
@@ -192,7 +194,8 @@ export default function Home({ navigation }) {
         const topic = post.topic || '';
         const explanation = post.explanation || '';
         const author = post.authorEmail || '';
-        const haystack = `${topic} ${explanation} ${author}`.toLowerCase();
+        const authorName = post.authorName || '';
+        const haystack = `${topic} ${explanation} ${author} ${authorName}`.toLowerCase();
         return haystack.includes(normalizedQuery);
       })
     : posts;

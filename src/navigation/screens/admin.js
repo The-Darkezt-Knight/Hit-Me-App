@@ -12,7 +12,12 @@ import {
   View
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-import { deletePost, setPostHidden, subscribeToAllPosts } from '../../services/posts';
+import {
+  backfillPostAuthors,
+  deletePost,
+  setPostHidden,
+  subscribeToAllPosts
+} from '../../services/posts';
 import { deleteUserDoc, setUserActiveStatus, subscribeToAllUsers } from '../../services/users';
 
 export default function Admin({ navigation }) {
@@ -22,6 +27,7 @@ export default function Admin({ navigation }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [backfilling, setBackfilling] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -147,6 +153,46 @@ export default function Admin({ navigation }) {
     );
   };
 
+  const confirmBackfill = async () => {
+    if (backfilling) {
+      return;
+    }
+
+    setBackfilling(true);
+    try {
+      const result = await backfillPostAuthors();
+      Alert.alert(
+        'Backfill complete',
+        `Updated ${result.updated} of ${result.totalPosts} posts.`
+      );
+    } catch (err) {
+      Alert.alert('Backfill failed', err.message || 'Please try again.');
+    } finally {
+      setBackfilling(false);
+    }
+  };
+
+  const handleBackfillAuthors = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const confirmed = window.confirm(
+        'Backfill author names and profile images for existing posts?'
+      );
+      if (confirmed) {
+        confirmBackfill();
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Backfill posts',
+      'Backfill author names and profile images for existing posts?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Backfill', onPress: confirmBackfill }
+      ]
+    );
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView
@@ -186,7 +232,23 @@ export default function Admin({ navigation }) {
               <Text style={styles.errorText}>{error}</Text>
             ) : activeTab === 'posts' ? (
               <>
-                <Text style={styles.sectionTitle}>All Posts</Text>
+                <View style={styles.sectionHeader}>
+                  <Text style={[styles.sectionTitle, styles.sectionTitleInline]}>
+                    All Posts
+                  </Text>
+                  <Pressable
+                    style={[
+                      styles.backfillButton,
+                      backfilling ? styles.backfillButtonBusy : null
+                    ]}
+                    onPress={handleBackfillAuthors}
+                    disabled={backfilling}
+                  >
+                    <Text style={styles.backfillButtonText}>
+                      {backfilling ? 'Backfilling...' : 'Backfill authors'}
+                    </Text>
+                  </Pressable>
+                </View>
                 {posts.length === 0 ? (
                   <Text style={styles.stateText}>No posts available.</Text>
                 ) : (
@@ -363,6 +425,33 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     marginBottom: 16,
     fontFamily: 'Georgia'
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 16
+  },
+  sectionTitleInline: {
+    marginBottom: 0
+  },
+  backfillButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#eef6ff',
+    borderWidth: 1,
+    borderColor: '#0b8bd4'
+  },
+  backfillButtonBusy: {
+    opacity: 0.7
+  },
+  backfillButtonText: {
+    fontSize: 12,
+    color: '#0b8bd4',
+    fontWeight: '700',
+    fontFamily: 'Trebuchet MS'
   },
   stateText: {
     fontSize: 14,
