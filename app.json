@@ -8,6 +8,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "scheme": "hitmeapp",
+    "extra": {
+      "googleExpoClientId": "480875423405-3smkqrm58p54j6erdfl2hlr1k827fbo5.apps.googleusercontent.com",
+      "googleAndroidClientId": "480875423405-3smkqrm58p54j6erdfl2hlr1k827fbo5.apps.googleusercontent.com",
+      "googleWebClientId": "480875423405-3smkqrm58p54j6erdfl2hlr1k827fbo5.apps.googleusercontent.com"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hitmeapp"
@@ -30,7 +35,8 @@
           "backgroundColor": "#ffffff",
           "image": "./assets/splash-icon.png"
         }
-      ]
+      ],
+      "expo-web-browser"
     ]
   }
 }
