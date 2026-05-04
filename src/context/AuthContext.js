@@ -70,6 +70,8 @@ export function AuthProvider({ children }) {
           }
 
           firestoreUnsubscribe = onSnapshot(doc(db, 'users', firebaseUser.uid), async (docSnap) => {
+            let finalUser = { ...baseUser };
+
             if (docSnap.exists()) {
               const userData = docSnap.data();
               if (userData.isActive === false) {
@@ -79,6 +81,8 @@ export function AuthProvider({ children }) {
                 await AsyncStorage.removeItem(STORAGE_KEY);
                 return;
               }
+
+              finalUser = { ...baseUser, ...userData };
             } else if (!baseUser.isAdmin) {
                 // Check if user is newly created (e.g. less than 10 seconds ago)
                 // If so, wait for the document to be created rather than logging them out immediately.
@@ -98,8 +102,8 @@ export function AuthProvider({ children }) {
                 }
             }
 
-            setUser(baseUser);
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(baseUser));
+            setUser(finalUser);
+            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(finalUser));
           });
         } else {
           setUser(null);

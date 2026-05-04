@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
+  Image,
   Modal,
   Platform,
   Pressable,
@@ -11,36 +12,6 @@ import {
   TextInput,
   View
 } from 'react-native';
-
-const InteractiveButton = ({ onPress, style, children }) => {
-  const scale = useRef(new Animated.Value(1)).current;
-
-  const handlePressIn = () => {
-    Animated.spring(scale, {
-      toValue: 0.95,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scale, {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-    >
-      <Animated.View style={[style, { transform: [{ scale }] }]}>
-        {children}
-      </Animated.View>
-    </Pressable>
-  );
-};
 import PostCard from '../../component/PostCard';
 import PostComposer from '../../component/PostComposer';
 import { useAuth } from '../../context/AuthContext';
@@ -51,18 +22,19 @@ import {
   subscribeToUserPosts,
   updatePost
 } from '../../services/posts';
+import { updateUserProfile } from '../../services/users';
 
 const colors = {
   background: '#ffffff',
   card: '#ffffff',
-  primary: '#000000',
-  primaryDark: '#1a1a1a',
-  accent: '#f0f0f0',
-  accentStrong: '#e0e0e0',
-  border: '#eaeaea',
-  text: '#111111',
-  muted: '#666666',
-  soft: '#fafafa'
+  primary: '#0b8bd4',
+  primaryDark: '#0a6aa3',
+  accent: '#d9f1ff',
+  accentStrong: '#b7e4ff',
+  border: '#d6e8f6',
+  text: '#0f172a',
+  muted: '#4a5b76',
+  soft: '#eef6ff'
 };
 
 export default function Profile({ navigation }) {
@@ -72,6 +44,17 @@ export default function Profile({ navigation }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    fullName: '',
+    bio: '',
+    location: '',
+    birthday: '',
+    profileImage: '',
+    backgroundImage: ''
+  });
+  const [profileSubmitting, setProfileSubmitting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
@@ -246,6 +229,35 @@ export default function Profile({ navigation }) {
     setEditingPost(null);
   };
 
+  const handleOpenEditProfile = () => {
+    setProfileForm({
+      fullName: user?.fullName || '',
+      bio: user?.bio || '',
+      location: user?.location || '',
+      birthday: user?.birthday || '',
+      profileImage: user?.profileImage || '',
+      backgroundImage: user?.backgroundImage || ''
+    });
+    setEditProfileOpen(true);
+  };
+
+  const handleCloseEditProfile = () => {
+    setEditProfileOpen(false);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user?.uid) return;
+    setProfileSubmitting(true);
+    try {
+      await updateUserProfile(user.uid, profileForm);
+      setEditProfileOpen(false);
+    } catch (err) {
+      Alert.alert('Error updating profile', err.message);
+    } finally {
+      setProfileSubmitting(false);
+    }
+  };
+
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredPosts = normalizedQuery
     ? posts.filter((post) => {
@@ -259,12 +271,30 @@ export default function Profile({ navigation }) {
 
   const feedContent = (
     <View style={styles.feedContent}>
-      <View style={styles.profileIntroCard}>
-        <View style={styles.profileIntroAccent} />
-        <Text style={styles.profileIntroTitle}>Your Profile Feed</Text>
-        <Text style={styles.profileIntroText}>
-          This space shows every post you created, including private updates.
-        </Text>
+      <View style={styles.profileBannerContainer}>
+        {user?.backgroundImage ? (
+          <Image source={{ uri: user.backgroundImage }} style={styles.bannerImage} />
+        ) : (
+          <View style={styles.bannerPlaceholder} />
+        )}
+        <View style={styles.profileAvatarWrapper}>
+          {user?.profileImage ? (
+            <Image source={{ uri: user.profileImage }} style={styles.profileAvatar} />
+          ) : (
+            <View style={[styles.profileAvatar, styles.profileAvatarPlaceholder]} />
+          )}
+        </View>
+        <View style={styles.profileInfoContainer}>
+          <Text style={styles.profileName}>{user?.fullName || user?.email || 'Unknown User'}</Text>
+          {user?.bio ? <Text style={styles.profileBio}>{user.bio}</Text> : null}
+          <View style={styles.profileDetailsRow}>
+            {user?.location ? <Text style={styles.profileDetailText}>📍 {user.location}</Text> : null}
+            {user?.birthday ? <Text style={styles.profileDetailText}>🎂 {user.birthday}</Text> : null}
+          </View>
+          <Pressable style={styles.editProfileButton} onPress={handleOpenEditProfile}>
+            <Text style={styles.editProfileButtonText}>Edit Profile</Text>
+          </Pressable>
+        </View>
       </View>
 
       {error ? <Text style={styles.stateText}>{error}</Text> : null}
@@ -310,18 +340,18 @@ export default function Profile({ navigation }) {
             />
           </View>
           <View style={styles.headerActions}>
-            <InteractiveButton
+            <Pressable
               style={styles.secondaryButtonSmall}
               onPress={() => navigation.navigate('Home')}
             >
               <Text style={styles.secondaryButtonSmallText}>Back home</Text>
-            </InteractiveButton>
-            <InteractiveButton
+            </Pressable>
+            <Pressable
               style={styles.primaryButtonSmall}
               onPress={handleOpenComposer}
             >
               <Text style={styles.primaryButtonSmallText}>New post</Text>
-            </InteractiveButton>
+            </Pressable>
           </View>
         </Animated.View>
 
@@ -348,12 +378,12 @@ export default function Profile({ navigation }) {
               <Text style={styles.modalTitle}>
                 {editingPost ? 'Update post' : 'New post'}
               </Text>
-              <InteractiveButton
+              <Pressable
                 style={styles.secondaryButtonSmall}
                 onPress={handleCloseComposer}
               >
                 <Text style={styles.secondaryButtonSmallText}>Close</Text>
-              </InteractiveButton>
+              </Pressable>
             </View>
             <ScrollView contentContainerStyle={styles.modalContent}>
               <PostComposer
@@ -368,6 +398,93 @@ export default function Profile({ navigation }) {
                 onSubmit={editingPost ? handleUpdatePost : handleCreatePost}
                 busy={submitting}
               />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={editProfileOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseEditProfile}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Profile</Text>
+              <Pressable
+                style={styles.secondaryButtonSmall}
+                onPress={handleCloseEditProfile}
+              >
+                <Text style={styles.secondaryButtonSmallText}>Close</Text>
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={styles.modalContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Full Name</Text>
+                <TextInput
+                  style={styles.profileInput}
+                  value={profileForm.fullName}
+                  onChangeText={(val) => setProfileForm({ ...profileForm, fullName: val })}
+                  placeholder="e.g. Jane Doe"
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Bio</Text>
+                <TextInput
+                  style={[styles.profileInput, { height: 80 }]}
+                  multiline
+                  value={profileForm.bio}
+                  onChangeText={(val) => setProfileForm({ ...profileForm, bio: val })}
+                  placeholder="Tell us about yourself..."
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Location</Text>
+                <TextInput
+                  style={styles.profileInput}
+                  value={profileForm.location}
+                  onChangeText={(val) => setProfileForm({ ...profileForm, location: val })}
+                  placeholder="e.g. New York, NY"
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Birthday</Text>
+                <TextInput
+                  style={styles.profileInput}
+                  value={profileForm.birthday}
+                  onChangeText={(val) => setProfileForm({ ...profileForm, birthday: val })}
+                  placeholder="e.g. January 1st"
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Profile Image URL</Text>
+                <TextInput
+                  style={styles.profileInput}
+                  value={profileForm.profileImage}
+                  onChangeText={(val) => setProfileForm({ ...profileForm, profileImage: val })}
+                  placeholder="https://..."
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Background Image URL</Text>
+                <TextInput
+                  style={styles.profileInput}
+                  value={profileForm.backgroundImage}
+                  onChangeText={(val) => setProfileForm({ ...profileForm, backgroundImage: val })}
+                  placeholder="https://..."
+                />
+              </View>
+              <Pressable
+                style={[styles.primaryButtonSmall, { marginTop: 12, paddingVertical: 12, alignItems: 'center' }]}
+                onPress={handleSaveProfile}
+                disabled={profileSubmitting}
+              >
+                <Text style={styles.primaryButtonSmallText}>
+                  {profileSubmitting ? 'Saving...' : 'Save Profile'}
+                </Text>
+              </Pressable>
             </ScrollView>
           </View>
         </View>
@@ -394,15 +511,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    borderRadius: 24,
+    padding: 18,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
     backgroundColor: colors.card,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2
+    shadowColor: colors.primaryDark,
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4
   },
   brandBlock: {
     flexDirection: 'row',
@@ -410,33 +528,39 @@ const styles = StyleSheet.create({
     gap: 12
   },
   brandMark: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: colors.text,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    shadowColor: colors.primaryDark,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 }
   },
   brandTitle: {
     fontSize: 22,
     fontWeight: '700',
     color: colors.text,
+    fontFamily: 'Georgia'
   },
   brandTag: {
     fontSize: 12,
     color: colors.muted,
+    fontFamily: 'Trebuchet MS'
   },
   searchWrap: {
     flex: 1,
-    minWidth: 220,
-    maxWidth: 400,
+    minWidth: 220
   },
   searchInput: {
-    height: 42,
-    borderRadius: 21,
+    height: 44,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 18,
-    backgroundColor: colors.background,
+    paddingHorizontal: 14,
+    backgroundColor: colors.soft,
     color: colors.text,
+    fontFamily: 'Trebuchet MS'
   },
   headerActions: {
     flexDirection: 'row',
@@ -458,59 +582,131 @@ const styles = StyleSheet.create({
   feedContent: {
     gap: 18
   },
-  profileIntroCard: {
-    backgroundColor: colors.primary,
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
+  profileBannerContainer: {
+    backgroundColor: colors.card,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.primaryDark,
+    shadowOpacity: 0.08,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
-    gap: 8,
-    alignItems: 'center',
+    elevation: 2,
+    overflow: 'hidden',
+    position: 'relative'
   },
-  profileIntroAccent: {
-    display: 'none',
+  bannerImage: {
+    width: '100%',
+    height: 200,
+    resizeMode: 'cover'
   },
-  profileIntroTitle: {
-    fontSize: 20,
+  bannerPlaceholder: {
+    width: '100%',
+    height: 200,
+    backgroundColor: colors.accentStrong
+  },
+  profileAvatarWrapper: {
+    position: 'absolute',
+    top: 140,
+    left: 20,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 4,
+    borderColor: colors.card,
+    backgroundColor: colors.card,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    zIndex: 10
+  },
+  profileAvatar: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 55,
+    resizeMode: 'cover'
+  },
+  profileAvatarPlaceholder: {
+    backgroundColor: colors.primary
+  },
+  profileInfoContainer: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    backgroundColor: colors.card
+  },
+  profileName: {
+    fontSize: 24,
     fontWeight: '700',
-    color: colors.background,
+    color: colors.text,
+    fontFamily: 'Georgia',
+    marginBottom: 4
   },
-  profileIntroText: {
+  profileBio: {
     fontSize: 14,
-    lineHeight: 22,
-    color: colors.accentStrong,
-    textAlign: 'center',
+    color: colors.muted,
+    fontFamily: 'Trebuchet MS',
+    marginBottom: 10,
+    lineHeight: 20
+  },
+  profileDetailsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginBottom: 16
+  },
+  profileDetailText: {
+    fontSize: 13,
+    color: colors.muted,
+    fontFamily: 'Trebuchet MS'
+  },
+  editProfileButton: {
+    backgroundColor: colors.soft,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignSelf: 'flex-start'
+  },
+  editProfileButtonText: {
+    color: colors.primaryDark,
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: 'Trebuchet MS'
   },
   primaryButtonSmall: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 100
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12
   },
   primaryButtonSmallText: {
     color: '#ffffff',
     fontWeight: '700',
     fontSize: 12,
+    fontFamily: 'Trebuchet MS'
   },
   secondaryButtonSmall: {
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 100
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10
   },
   secondaryButtonSmallText: {
     color: colors.muted,
     fontSize: 12,
     fontWeight: '700',
+    fontFamily: 'Trebuchet MS'
   },
   stateText: {
     color: colors.muted,
     fontSize: 13,
     textAlign: 'center',
+    fontFamily: 'Trebuchet MS'
   },
   modalBackdrop: {
     flex: 1,
@@ -539,8 +735,30 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: colors.text,
+    fontFamily: 'Georgia'
   },
   modalContent: {
     paddingBottom: 8
+  },
+  inputGroup: {
+    marginBottom: 16
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+    fontFamily: 'Trebuchet MS',
+    marginBottom: 6
+  },
+  profileInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    fontFamily: 'Trebuchet MS',
+    color: colors.text,
+    backgroundColor: colors.background
   }
 });
