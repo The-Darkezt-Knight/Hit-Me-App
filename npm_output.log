@@ -1,0 +1,19 @@
+Starting project at /app
+Starting Metro Bundler
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+Web ./index.tsx ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web ./index.tsx ▓▓▓▓▓▓▓▓░░░░░░░░ 52.9% (137/248)
+Web ./index.tsx ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 73.3% (398/467)
+Web Bundled 10769ms index.tsx (556 modules)
+Web ./index.tsx ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (556/556)
+ LOG  [web] Logs will appear in the browser console
+Web ./index.tsx ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 45ms index.tsx (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web ./index.tsx ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 42ms index.tsx (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web ./index.tsx ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 99ms index.tsx (1 module)
+ LOG  [web] Logs will appear in the browser console
