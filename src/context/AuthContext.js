@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { auth } from '../../firebaseConfig';
+import { auth, db } from '../../firebaseConfig';
 
 const STORAGE_KEY = 'auth.currentUser';
 const POLL_INTERVAL_MS = 5000;
@@ -52,28 +53,62 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    let firestoreUnsubscribe = null;
+
+    const authUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
         if (firebaseUser) {
           const email = firebaseUser.email || '';
-          const nextUser = {
+          const baseUser = {
             uid: firebaseUser.uid,
             email,
             isAdmin: email.toLowerCase() === ADMIN_EMAIL
           };
 
-          setUser(nextUser);
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+          if (firestoreUnsubscribe) {
+            firestoreUnsubscribe();
+          }
+
+          firestoreUnsubscribe = onSnapshot(doc(db, 'users', firebaseUser.uid), async (docSnap) => {
+            if (docSnap.exists()) {
+              const userData = docSnap.data();
+              if (userData.isActive === false) {
+                // User is deactivated
+                await signOut(auth);
+                setUser(null);
+                await AsyncStorage.removeItem(STORAGE_KEY);
+                return;
+              }
+            } else if (!baseUser.isAdmin) {
+                // If user document was deleted completely (and not admin)
+                await signOut(auth);
+                setUser(null);
+                await AsyncStorage.removeItem(STORAGE_KEY);
+                return;
+            }
+
+            setUser(baseUser);
+            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(baseUser));
+          });
         } else {
           setUser(null);
           await AsyncStorage.removeItem(STORAGE_KEY);
+          if (firestoreUnsubscribe) {
+            firestoreUnsubscribe();
+            firestoreUnsubscribe = null;
+          }
         }
       } finally {
         setAuthReady(true);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      if (firestoreUnsubscribe) {
+        firestoreUnsubscribe();
+      }
+      authUnsubscribe();
+    };
   }, []);
 
   useEffect(() => {

@@ -13,17 +13,21 @@ import {
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { subscribeToAllPosts, setPostHidden, deletePost } from '../../services/posts';
+import { subscribeToAllUsers, setUserActiveStatus, deleteUserDoc } from '../../services/users';
 
 export default function Admin({ navigation }) {
   const { logout } = useAuth();
+  const [activeTab, setActiveTab] = useState('posts');
   const [posts, setPosts] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
 
-    const unsubscribe = subscribeToAllPosts(
+    const unsubscribePosts = subscribeToAllPosts(
       (data) => {
         if (!active) return;
         setPosts(data);
@@ -37,9 +41,23 @@ export default function Admin({ navigation }) {
       }
     );
 
+    const unsubscribeUsers = subscribeToAllUsers(
+      (data) => {
+        if (!active) return;
+        setUsers(data);
+        setLoading(false);
+      },
+      (err) => {
+        if (!active) return;
+        setLoading(false);
+        setError('Failed to sync users. ' + err.message);
+      }
+    );
+
     return () => {
       active = false;
-      unsubscribe();
+      unsubscribePosts();
+      unsubscribeUsers();
     };
   }, []);
 
@@ -86,6 +104,49 @@ export default function Admin({ navigation }) {
     );
   };
 
+  const handleToggleUserActive = async (user) => {
+    try {
+      await setUserActiveStatus(user.id, user.isActive === false ? true : false);
+    } catch (err) {
+      Alert.alert('Error', err.message);
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const confirmed = window.confirm(
+        'Are you sure you want to delete this user? This action cannot be undone.'
+      );
+      if (confirmed) {
+        try {
+          await deleteUserDoc(user.id);
+        } catch (err) {
+          Alert.alert('Error', err.message);
+        }
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Delete user',
+      'Are you sure you want to delete this user? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteUserDoc(user.id);
+            } catch (err) {
+              Alert.alert('Error', err.message);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView
@@ -103,50 +164,110 @@ export default function Admin({ navigation }) {
             </Pressable>
           </View>
 
+          <View style={styles.tabs}>
+            <Pressable
+              style={[styles.tab, activeTab === 'posts' && styles.tabActive]}
+              onPress={() => setActiveTab('posts')}
+            >
+              <Text style={[styles.tabText, activeTab === 'posts' && styles.tabTextActive]}>Posts</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.tab, activeTab === 'users' && styles.tabActive]}
+              onPress={() => setActiveTab('users')}
+            >
+              <Text style={[styles.tabText, activeTab === 'users' && styles.tabTextActive]}>Users</Text>
+            </Pressable>
+          </View>
+
           <View style={styles.content}>
-            <Text style={styles.sectionTitle}>All Posts</Text>
             {loading ? (
               <Text style={styles.stateText}>Loading...</Text>
             ) : error ? (
               <Text style={styles.errorText}>{error}</Text>
-            ) : posts.length === 0 ? (
-              <Text style={styles.stateText}>No posts available.</Text>
-            ) : (
-              <ScrollView style={styles.tableScroll}>
-                <View style={styles.table}>
-                  <View style={[styles.tableRow, styles.tableHeader]}>
-                    <Text style={[styles.tableCell, styles.flex2, styles.bold]}>Topic</Text>
-                    <Text style={[styles.tableCell, styles.flex2, styles.bold]}>Author</Text>
-                    <Text style={[styles.tableCell, styles.flex1, styles.bold]}>Privacy</Text>
-                    <Text style={[styles.tableCell, styles.flex1, styles.bold]}>Hidden</Text>
-                    <Text style={[styles.tableCell, styles.flex2, styles.bold, styles.center]}>Actions</Text>
-                  </View>
-                  {posts.map((post) => (
-                    <View key={post.id} style={styles.tableRow}>
-                      <Text style={[styles.tableCell, styles.flex2]} numberOfLines={1}>{post.topic || 'Untitled'}</Text>
-                      <Text style={[styles.tableCell, styles.flex2]} numberOfLines={1}>{post.authorEmail || 'Unknown'}</Text>
-                      <Text style={[styles.tableCell, styles.flex1]}>{post.privacy}</Text>
-                      <Text style={[styles.tableCell, styles.flex1]}>{post.hidden ? 'Yes' : 'No'}</Text>
-                      <View style={[styles.tableCell, styles.flex2, styles.actionsContainer]}>
-                        <Pressable
-                          style={styles.actionButton}
-                          onPress={() => handleToggleHidden(post)}
-                        >
-                          <Text style={styles.actionButtonText}>
-                            {post.hidden ? 'Unhide' : 'Hide'}
-                          </Text>
-                        </Pressable>
-                        <Pressable
-                          style={[styles.actionButton, styles.actionButtonDanger]}
-                          onPress={() => handleDeletePost(post)}
-                        >
-                          <Text style={styles.actionButtonTextDanger}>Delete</Text>
-                        </Pressable>
+            ) : activeTab === 'posts' ? (
+              <>
+                <Text style={styles.sectionTitle}>All Posts</Text>
+                {posts.length === 0 ? (
+                  <Text style={styles.stateText}>No posts available.</Text>
+                ) : (
+                  <ScrollView style={styles.tableScroll}>
+                    <View style={styles.table}>
+                      <View style={[styles.tableRow, styles.tableHeader]}>
+                        <Text style={[styles.tableCell, styles.flex2, styles.bold]}>Topic</Text>
+                        <Text style={[styles.tableCell, styles.flex2, styles.bold]}>Author</Text>
+                        <Text style={[styles.tableCell, styles.flex1, styles.bold]}>Privacy</Text>
+                        <Text style={[styles.tableCell, styles.flex1, styles.bold]}>Hidden</Text>
+                        <Text style={[styles.tableCell, styles.flex2, styles.bold, styles.center]}>Actions</Text>
                       </View>
+                      {posts.map((post) => (
+                        <View key={post.id} style={styles.tableRow}>
+                          <Text style={[styles.tableCell, styles.flex2]} numberOfLines={1}>{post.topic || 'Untitled'}</Text>
+                          <Text style={[styles.tableCell, styles.flex2]} numberOfLines={1}>{post.authorEmail || 'Unknown'}</Text>
+                          <Text style={[styles.tableCell, styles.flex1]}>{post.privacy}</Text>
+                          <Text style={[styles.tableCell, styles.flex1]}>{post.hidden ? 'Yes' : 'No'}</Text>
+                          <View style={[styles.tableCell, styles.flex2, styles.actionsContainer]}>
+                            <Pressable
+                              style={styles.actionButton}
+                              onPress={() => handleToggleHidden(post)}
+                            >
+                              <Text style={styles.actionButtonText}>
+                                {post.hidden ? 'Unhide' : 'Hide'}
+                              </Text>
+                            </Pressable>
+                            <Pressable
+                              style={[styles.actionButton, styles.actionButtonDanger]}
+                              onPress={() => handleDeletePost(post)}
+                            >
+                              <Text style={styles.actionButtonTextDanger}>Delete</Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                      ))}
                     </View>
-                  ))}
-                </View>
-              </ScrollView>
+                  </ScrollView>
+                )}
+              </>
+            ) : (
+              <>
+                <Text style={styles.sectionTitle}>User Management</Text>
+                {users.length === 0 ? (
+                  <Text style={styles.stateText}>No users available.</Text>
+                ) : (
+                  <ScrollView style={styles.tableScroll}>
+                    <View style={styles.table}>
+                      <View style={[styles.tableRow, styles.tableHeader]}>
+                        <Text style={[styles.tableCell, styles.flex2, styles.bold]}>Email</Text>
+                        <Text style={[styles.tableCell, styles.flex2, styles.bold]}>UID</Text>
+                        <Text style={[styles.tableCell, styles.flex1, styles.bold]}>Status</Text>
+                        <Text style={[styles.tableCell, styles.flex2, styles.bold, styles.center]}>Actions</Text>
+                      </View>
+                      {users.map((user) => (
+                        <View key={user.id} style={styles.tableRow}>
+                          <Text style={[styles.tableCell, styles.flex2]} numberOfLines={1}>{user.email}</Text>
+                          <Text style={[styles.tableCell, styles.flex2]} numberOfLines={1}>{user.uid}</Text>
+                          <Text style={[styles.tableCell, styles.flex1]}>{user.isActive === false ? 'Inactive' : 'Active'}</Text>
+                          <View style={[styles.tableCell, styles.flex2, styles.actionsContainer]}>
+                            <Pressable
+                              style={styles.actionButton}
+                              onPress={() => handleToggleUserActive(user)}
+                            >
+                              <Text style={styles.actionButtonText}>
+                                {user.isActive === false ? 'Activate' : 'Deactivate'}
+                              </Text>
+                            </Pressable>
+                            <Pressable
+                              style={[styles.actionButton, styles.actionButtonDanger]}
+                              onPress={() => handleDeleteUser(user)}
+                            >
+                              <Text style={styles.actionButtonTextDanger}>Delete</Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </ScrollView>
+                )}
+              </>
             )}
           </View>
         </View>
@@ -196,6 +317,32 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
     fontFamily: 'Trebuchet MS'
+  },
+  tabs: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 5
+  },
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d6e8f6'
+  },
+  tabActive: {
+    backgroundColor: '#0096c7',
+    borderColor: '#0096c7'
+  },
+  tabText: {
+    color: '#4a5b76',
+    fontWeight: '700',
+    fontSize: 14,
+    fontFamily: 'Trebuchet MS'
+  },
+  tabTextActive: {
+    color: '#ffffff'
   },
   content: {
     flex: 1,

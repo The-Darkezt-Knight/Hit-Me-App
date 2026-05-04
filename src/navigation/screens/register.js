@@ -47,7 +47,8 @@ export default function Register({navigation}) {
                 uid: user.uid,
                 email: user.email,
                 authProvider: 'password',
-                createdAt: serverTimestamp()
+                createdAt: serverTimestamp(),
+                isActive: true
             });
         } catch (error) {
             setAlert(error.message);
