@@ -80,11 +80,22 @@ export function AuthProvider({ children }) {
                 return;
               }
             } else if (!baseUser.isAdmin) {
-                // If user document was deleted completely (and not admin)
-                await signOut(auth);
-                setUser(null);
-                await AsyncStorage.removeItem(STORAGE_KEY);
-                return;
+                // Check if user is newly created (e.g. less than 10 seconds ago)
+                // If so, wait for the document to be created rather than logging them out immediately.
+                const creationTime = firebaseUser.metadata?.creationTime;
+                if (creationTime) {
+                   const diffInMs = Date.now() - new Date(creationTime).getTime();
+                   if (diffInMs > 10000) {
+                      // Older user with no document, assume they were completely deleted
+                      await signOut(auth);
+                      setUser(null);
+                      await AsyncStorage.removeItem(STORAGE_KEY);
+                      return;
+                   }
+                   // if it's within 10s, don't sign out. Just set the user and let the subsequent snapshot update fix it.
+                } else {
+                   // If we can't tell, be conservative and don't sign out to avoid registration loops.
+                }
             }
 
             setUser(baseUser);
