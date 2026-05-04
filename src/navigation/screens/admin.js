@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+    Alert,
     FlatList,
     Keyboard,
     KeyboardAvoidingView,
@@ -41,7 +42,32 @@ export default function Admin({navigation}) {
         }
     };
 
-    const removeUser = async (userId) => {
+    const removeUser = (userId) => {
+        if (Platform.OS === 'web') {
+            const confirmed = window.confirm("Are you sure you want to completely remove this user from the database?");
+            if (confirmed) {
+                deleteUserDoc(userId);
+            }
+        } else {
+            Alert.alert(
+                "Confirm Deletion",
+                "Are you sure you want to completely remove this user from the database?",
+                [
+                    {
+                        text: "Cancel",
+                        style: "cancel"
+                    },
+                    {
+                        text: "Delete",
+                        style: "destructive",
+                        onPress: () => deleteUserDoc(userId)
+                    }
+                ]
+            );
+        }
+    };
+
+    const deleteUserDoc = async (userId) => {
         try {
             await deleteDoc(doc(db, 'users', userId));
         } catch (error) {
