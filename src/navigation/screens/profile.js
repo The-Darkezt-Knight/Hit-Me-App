@@ -114,7 +114,9 @@ export default function Profile({ navigation }) {
       await createPost({
         ...payload,
         authorId: user.uid,
-        authorEmail: user.email || 'Unknown'
+        authorEmail: user.email || 'Unknown',
+        authorName: user.fullName?.trim?.() || '',
+        authorProfileImage: user.profileImage?.trim?.() || ''
       });
       setComposerOpen(false);
       setEditingPost(null);
